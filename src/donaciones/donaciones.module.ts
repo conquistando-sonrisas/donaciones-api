@@ -4,6 +4,8 @@ import { DonacionesService } from './donaciones.service';
 import { MP_CLIENT } from './mercado-pago.constants';
 import { ConfigService } from '@nestjs/config';
 import MercadoPagoConfig, { Payment, PreApproval } from 'mercadopago';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 const mercadoPagoProvider: Provider = {
   provide: MP_CLIENT,
@@ -28,11 +30,17 @@ const mercadoPagoProvider: Provider = {
   inject: [ConfigService]
 }
 
+const throttlerProvider: Provider = {
+  provide: APP_GUARD,
+  useClass: ThrottlerGuard
+}
+
 @Module({
   controllers: [DonacionesController],
   providers: [
     DonacionesService,
-    mercadoPagoProvider
+    mercadoPagoProvider,
+    throttlerProvider
   ]
 })
 export class DonacionesModule { }
