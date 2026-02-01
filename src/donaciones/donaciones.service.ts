@@ -4,6 +4,11 @@ import { Payment, PreApproval } from 'mercadopago';
 import { PaymentCreateRequest } from 'mercadopago/dist/clients/payment/create/types';
 import { ConfigService } from '@nestjs/config';
 import { PreApprovalRequest } from 'mercadopago/dist/clients/preApproval/commonTypes';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Donador } from './entities/donador.entity';
+import { DataSource, Repository } from 'typeorm';
+import { CreateDonadorDto } from './dtos/create-donor.dto';
+import { Fiscal } from './entities/fiscal.entity';
 
 
 @Injectable()
@@ -15,13 +20,67 @@ export class DonacionesService {
       payment: Payment,
       preapproval: PreApproval
     },
-    private readonly configService: ConfigService) { }
+
+    private readonly configService: ConfigService,
+
+    @InjectRepository(Donador)
+    private readonly donacionesRepository: Repository<Donador>,
+
+    private readonly dataSource: DataSource
+  ) { }
+
+
+
+  async saveDonador(dto: CreateDonadorDto) {
+    const qr = this.dataSource.createQueryRunner();
+
+    await qr.connect();
+    await qr.startTransaction()
+
+    const nombreCompleto = `${dto.nombre} ${dto.apellidoPaterno} ${dto.apellidoMaterno}`;
+    let fiscal: Fiscal | null = null;
+    try {
+      if (dto.needsComprobante) {
+        fiscal = new Fiscal();
+        fiscal.direccion = dto.domicilio;
+        fiscal.rfc = dto.rfc;
+        fiscal.persona = dto.tipoPersona;
+        fiscal.razonSocial = dto.tipoPersona === 'moral' ? dto.razonSocial : nombreCompleto;
+        fiscal.regimenFiscal = `${dto.regimenFiscal.codigo} - ${dto.regimenFiscal.regimen}`;
+        fiscal.usoCfdi = `${dto.usoCfdi.codigo} - ${dto.usoCfdi.uso}`;
+        await qr.manager.save(fiscal);
+      }
+
+      const donador = new Donador();
+      donador.nombre = dto.nombre;
+      donador.apellidoPaterno = dto.apellidoPaterno;
+      donador.apellidoMaterno = dto.apellidoMaterno;
+      donador.correo = dto.correo;
+      donador.telefono = dto.telefono ? dto.telefono : null;
+      donador.canContactMe = dto.canContactMe;
+      donador.needsComprobante = dto.needsComprobante;
+      if (fiscal) {
+        donador.fiscal = fiscal;
+      }
+
+      await qr.manager.save(donador);
+      await qr.commitTransaction();
+
+      return donador;
+    } catch (e) {
+      console.log(e)
+      await qr.rollbackTransaction();
+      throw new Error('No se pude procesar esta donación')
+    } finally {
+      await qr.release();
+    }
+  }
 
 
 
   async processOneTimeDonation(body: BodyOneTimeDonationArgs) {
     const { donacion, donador } = body;
-    const fees = this.calculateFees(donacion.amount);
+    const fees = this.roundToTwo(this.calculateFees(donacion.amount));
 
     try {
       const res = await this.mercadoPago.payment.create({
@@ -52,7 +111,7 @@ export class DonacionesService {
           : null
       }
     } catch (err) {
-      // log err
+      console.log(err)
       throw new Error('Hubo un problema al procesar la donación');
     }
 
@@ -62,7 +121,7 @@ export class DonacionesService {
 
   async processMonthlyDonation(body: BodyMonthlyDonationArgs) {
     const { donacion, donador } = body;
-    const fees = this.calculateFees(donacion.amount);
+    const fees = this.roundToTwo(this.calculateFees(donacion.amount));
 
     try {
       const res = await this.mercadoPago.preapproval.create({
@@ -99,6 +158,12 @@ export class DonacionesService {
   private calculateFees(grossAmount: number) {
     return (grossAmount / 0.966476) - grossAmount;
   }
+
+
+  private roundToTwo(amount: number) {
+    return Math.round((amount + Number.EPSILON) * 100) / 100;
+  }
+
 }
 
 

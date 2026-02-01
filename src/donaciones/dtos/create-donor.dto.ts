@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateIf, ValidateNested } from "class-validator";
+import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, ValidateIf, ValidateNested } from "class-validator";
 
 
 export class RegimenFiscalDto {
@@ -24,7 +24,7 @@ export class UsoCfdiDto {
   @IsNotEmpty()
   codigo: string;
 }
-export class CreateDonorDto {
+export class CreateDonadorDto {
 
   @IsString()
   @IsNotEmpty()
@@ -35,7 +35,13 @@ export class CreateDonorDto {
   @IsString()
   @IsNotEmpty()
   @Transform(({ value }) => value.trim())
-  apellido: string;
+  apellidoPaterno: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  @Transform(({ value }) => value.trim())
+  apellidoMaterno: string | null;
 
 
   @IsEmail()
@@ -51,29 +57,43 @@ export class CreateDonorDto {
 
 
   @IsBoolean()
-  requiresFactura: boolean;
+  needsComprobante: boolean;
 
 
-  @ValidateIf(o => o.requiresComprobanteFiscal === true)
+  @ValidateIf(o => o.needsComprobante === true)
   @IsString()
   @IsNotEmpty()
   rfc: string;
 
 
-  @ValidateIf(o => o.requiresComprobanteFiscal === true)
+  @ValidateIf(o => o.needsComprobante === true)
   @ValidateNested()
   usoCfdi: UsoCfdiDto;
 
 
-  @ValidateIf(o => o.requiresComprobanteFiscal === true)
+  @ValidateIf(o => o.needsComprobante === true)
   @ValidateNested()
   regimenFiscal: RegimenFiscalDto;
 
 
-  @ValidateIf(o => o.requiresComprobanteFiscal === true)
+  @ValidateIf(o => o.needsComprobante === true)
   @IsString()
   @IsNotEmpty()
   domicilio: string;
+
+
+  @ValidateIf(o => o.needsComprobante === true)
+  @IsString()
+  @IsIn(['moral', 'fisica'])
+  tipoPersona: string;
+
+  @ValidateIf(o => o.tipoPersona === 'moral')
+  @IsString()
+  @IsNotEmpty()
+  razonSocial: string;
+
+  @IsBoolean()
+  canContactMe: boolean;
 
 }
 

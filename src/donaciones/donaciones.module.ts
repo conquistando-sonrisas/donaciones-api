@@ -6,6 +6,10 @@ import { ConfigService } from '@nestjs/config';
 import MercadoPagoConfig, { Payment, PreApproval } from 'mercadopago';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Donador } from './entities/donador.entity';
+import { Donacion } from './entities/donacion.entity';
+import { Fiscal } from './entities/fiscal.entity';
 
 const mercadoPagoProvider: Provider = {
   provide: MP_CLIENT,
@@ -36,6 +40,7 @@ const throttlerProvider: Provider = {
 }
 
 @Module({
+  imports: [TypeOrmModule.forFeature([Donador, Donacion, Fiscal])],
   controllers: [DonacionesController],
   providers: [
     DonacionesService,

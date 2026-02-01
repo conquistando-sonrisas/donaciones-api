@@ -1,5 +1,5 @@
-import { IsBoolean, isBoolean, IsNotEmpty, IsNumber, IsString, Validate, ValidateNested } from "class-validator";
-import { CreateDonorDto } from "./create-donor.dto";
+import { IsBoolean, isBoolean, IsNotEmpty, IsNumber, IsNumberString, IsString, Validate, ValidateNested } from "class-validator";
+import { CreateDonadorDto } from "./create-donor.dto";
 import { Type } from "class-transformer";
 
 
@@ -11,9 +11,8 @@ export class OneTimeBodyDto {
   @IsNumber()
   amount: number;
 
-  @IsString()
-  @IsNotEmpty()
-  issuer_id: string;
+  @IsNumberString()
+  issuer_id: number;
 
   @IsString()
   @IsNotEmpty()
@@ -32,6 +31,6 @@ export class CreateOneTimeDonacionDto {
   donacion: OneTimeBodyDto;
 
   @ValidateNested()
-  @Type(() => CreateDonorDto)
-  donador: CreateDonorDto;
+  @Type(() => CreateDonadorDto)
+  donador: CreateDonadorDto;
 }
