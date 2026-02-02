@@ -6,10 +6,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Donador } from './donaciones/entities/donador.entity';
 import { Donacion } from './donaciones/entities/donacion.entity';
 import { Fiscal } from './donaciones/entities/fiscal.entity';
+import { EncryptionModule } from './encryption/encryption.module';
 
 @Module({
   imports: [
     DonacionesModule,
+    EncryptionModule,
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot({
       throttlers: [{
@@ -30,7 +32,7 @@ import { Fiscal } from './donaciones/entities/fiscal.entity';
         synchronize: true,
       }),
       inject: [ConfigService]
-    })
+    }),
   ],
   controllers: [],
   providers: [],

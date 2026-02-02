@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MP_CLIENT } from './mercado-pago.constants';
 import { Payment, PreApproval } from 'mercadopago';
 import { PaymentCreateRequest } from 'mercadopago/dist/clients/payment/create/types';
@@ -9,10 +9,12 @@ import { Donador } from './entities/donador.entity';
 import { DataSource, Repository } from 'typeorm';
 import { CreateDonadorDto } from './dtos/create-donor.dto';
 import { Fiscal } from './entities/fiscal.entity';
+import { EncryptionService } from 'src/encryption/encryption.service';
 
 
 @Injectable()
 export class DonacionesService {
+  private readonly logger = new Logger(DonacionesService.name, { timestamp: true });
 
   constructor(
     @Inject(MP_CLIENT)
@@ -26,7 +28,9 @@ export class DonacionesService {
     @InjectRepository(Donador)
     private readonly donacionesRepository: Repository<Donador>,
 
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+
+    private readonly encryptionService: EncryptionService
   ) { }
 
 
@@ -42,8 +46,15 @@ export class DonacionesService {
     try {
       if (dto.needsComprobante) {
         fiscal = new Fiscal();
-        fiscal.direccion = dto.domicilio;
-        fiscal.rfc = dto.rfc;
+        const direccionEncrypted = this.encryptionService.encrypt(dto.domicilio);
+        fiscal.direccionCipherText = direccionEncrypted.encrypted;
+        fiscal.direccionIv = direccionEncrypted.iv;
+        fiscal.direccionAuthTag = direccionEncrypted.tag;
+        const rfcEncrypted = this.encryptionService.encrypt(dto.rfc);
+        fiscal.rfcCipherText = rfcEncrypted.encrypted;
+        fiscal.rfcIv = rfcEncrypted.iv;
+        fiscal.rfcAuthTag = rfcEncrypted.tag;
+        
         fiscal.persona = dto.tipoPersona;
         fiscal.razonSocial = dto.tipoPersona === 'moral' ? dto.razonSocial : nombreCompleto;
         fiscal.regimenFiscal = `${dto.regimenFiscal.codigo} - ${dto.regimenFiscal.regimen}`;
@@ -68,7 +79,7 @@ export class DonacionesService {
 
       return donador;
     } catch (e) {
-      console.log(e)
+      this.logger.error(e);
       await qr.rollbackTransaction();
       throw new Error('No se pude procesar esta donación')
     } finally {
@@ -110,8 +121,8 @@ export class DonacionesService {
           }
           : null
       }
-    } catch (err) {
-      console.log(err)
+    } catch (e) {
+      this.logger.error(e);
       throw new Error('Hubo un problema al procesar la donación');
     }
 
@@ -145,8 +156,8 @@ export class DonacionesService {
         amount: res.auto_recurring?.transaction_amount,
         nextPayment: res.next_payment_date,
       };
-    } catch (err) {
-      // log err
+    } catch (e) {
+      this.logger.error(e);
       throw new Error('Hubo un problema al procesar la donación recurrente');
     }
   }

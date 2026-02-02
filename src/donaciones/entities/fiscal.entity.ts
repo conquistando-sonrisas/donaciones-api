@@ -19,13 +19,24 @@ export class Fiscal {
   @Column()
   usoCfdi: string;
 
-  @Column()
-  @Index()
-  rfc: string;
-
   @CreateDateColumn()
-  createdAt: Date
+  createdAt: Date;
 
   @Column()
-  direccion: string;
+  rfcCipherText: string;
+
+  @Column()
+  rfcIv: string;
+
+  @Column()
+  rfcAuthTag: string;
+
+  @Column()
+  direccionCipherText: string;
+
+  @Column()
+  direccionIv: string;
+
+  @Column()
+  direccionAuthTag: string;
 }

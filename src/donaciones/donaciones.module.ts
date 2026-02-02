@@ -10,6 +10,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Donador } from './entities/donador.entity';
 import { Donacion } from './entities/donacion.entity';
 import { Fiscal } from './entities/fiscal.entity';
+import { EncryptionModule } from 'src/encryption/encryption.module';
 
 const mercadoPagoProvider: Provider = {
   provide: MP_CLIENT,
@@ -40,12 +41,15 @@ const throttlerProvider: Provider = {
 }
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Donador, Donacion, Fiscal])],
+  imports: [
+    EncryptionModule,
+    TypeOrmModule.forFeature([Donador, Donacion, Fiscal]),
+  ],
   controllers: [DonacionesController],
   providers: [
     DonacionesService,
     mercadoPagoProvider,
-    throttlerProvider
+    throttlerProvider,
   ]
 })
 export class DonacionesModule { }
