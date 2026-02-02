@@ -3,7 +3,7 @@ import { CreateDonadorDto } from "./create-donor.dto";
 import { Type } from "class-transformer";
 
 
-export class OneTimeBodyDto {
+export class DonacionBodyDto {
 
   @IsBoolean()
   acceptedFees: boolean;
@@ -27,8 +27,8 @@ export class OneTimeBodyDto {
 export class CreateOneTimeDonacionDto {
 
   @ValidateNested()
-  @Type(() => OneTimeBodyDto)
-  donacion: OneTimeBodyDto;
+  @Type(() => DonacionBodyDto)
+  donacion: DonacionBodyDto;
 
   @ValidateNested()
   @Type(() => CreateDonadorDto)

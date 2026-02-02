@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
-import { CreateOneTimeDonacionDto } from './dtos/create-donacion.dto';
+import { CreateOneTimeDonacionDto as CreateDonacionDto } from './dtos/create-donacion.dto';
 import { DonacionesService } from './donaciones.service';
 
 @Controller({
@@ -13,7 +13,7 @@ export class DonacionesController {
   ) { }
 
   @Post('/one-time')
-  async handleOneTimeDonacion(@Body() body: CreateOneTimeDonacionDto) {
+  async handleOneTimeDonacion(@Body() body: CreateDonacionDto) {
     const donador = await this.donacionesService.saveDonador(body.donador);
 
     const paymentDetails = await this.donacionesService.processOneTimeDonation({
@@ -30,8 +30,19 @@ export class DonacionesController {
 
 
   @Post('/monthly')
-  handleMonthlyDonacion() {
-    return 'monthly'
+  async handleMonthlyDonacion(@Body() body: CreateDonacionDto) {
+    const donador = await this.donacionesService.saveDonador(body.donador);
+    const paymentDetails = await this.donacionesService.processMonthlyDonation({
+      donacion: body.donacion,
+      donador: {
+        donadorId: donador.id,
+        nombre: donador.nombre,
+        apellido: `${donador.apellidoPaterno} ${donador.apellidoMaterno}`,
+        correo: donador.correo,
+      }
+    });
+
+    return paymentDetails;
   }
 
 }
