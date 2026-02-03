@@ -1,4 +1,4 @@
-import { IsBoolean, isBoolean, IsNotEmpty, IsNumber, IsNumberString, IsString, Validate, ValidateNested } from "class-validator";
+import { IsBoolean, isBoolean, IsDefined, IsNotEmpty, IsNumber, IsNumberString, IsString, Validate, ValidateNested } from "class-validator";
 import { CreateDonadorDto } from "./create-donor.dto";
 import { Type } from "class-transformer";
 
@@ -26,10 +26,12 @@ export class DonacionBodyDto {
 
 export class CreateOneTimeDonacionDto {
 
+  @IsDefined()
   @ValidateNested()
   @Type(() => DonacionBodyDto)
   donacion: DonacionBodyDto;
 
+  @IsDefined()
   @ValidateNested()
   @Type(() => CreateDonadorDto)
   donador: CreateDonadorDto;

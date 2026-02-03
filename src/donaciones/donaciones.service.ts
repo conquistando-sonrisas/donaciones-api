@@ -10,6 +10,8 @@ import { DataSource, Repository } from 'typeorm';
 import { CreateDonadorDto } from './dtos/create-donor.dto';
 import { Fiscal } from './entities/fiscal.entity';
 import { EncryptionService } from 'src/encryption/encryption.service';
+import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
+import { Donacion } from './entities/donacion.entity';
 
 
 @Injectable()
@@ -26,7 +28,10 @@ export class DonacionesService {
     private readonly configService: ConfigService,
 
     @InjectRepository(Donador)
-    private readonly donacionesRepository: Repository<Donador>,
+    private readonly donadoresRepository: Repository<Donador>,
+
+    @InjectRepository(Donacion)
+    private readonly donacionesRepository: Repository<Donacion>,
 
     private readonly dataSource: DataSource,
 
@@ -54,7 +59,7 @@ export class DonacionesService {
         fiscal.rfcCipherText = rfcEncrypted.encrypted;
         fiscal.rfcIv = rfcEncrypted.iv;
         fiscal.rfcAuthTag = rfcEncrypted.tag;
-        
+
         fiscal.persona = dto.tipoPersona;
         fiscal.razonSocial = dto.tipoPersona === 'moral' ? dto.razonSocial : nombreCompleto;
         fiscal.regimenFiscal = `${dto.regimenFiscal.codigo} - ${dto.regimenFiscal.regimen}`;
@@ -161,6 +166,58 @@ export class DonacionesService {
       throw new Error('Hubo un problema al procesar la donación recurrente');
     }
   }
+
+
+
+  async saveDonacion(type: 'one-time' | 'monthly', donacionDetails: PaymentResponse) {
+    if (!donacionDetails.id || !donacionDetails.transaction_amount) {
+      throw new Error('Invalid')
+    }
+
+    const donadorId = donacionDetails.external_reference;
+    const donador = await this.donadoresRepository.findOneBy({ id: donadorId });
+
+    if (!donador) {
+      this.logger.error(`No se encontró donador con id: ${donadorId}`);
+      throw new Error('Donador no encontrado');
+    }
+
+    const donacion = new Donacion();
+    donacion.paymentId = donacionDetails.id;
+    donacion.monto = donacionDetails.transaction_amount;
+    donacion.donador = donador;
+    donacion.type = type;
+    
+    const created = await this.donacionesRepository.save(donacion);
+    return {
+      donacion,
+      donador
+    }
+  }
+
+
+
+  async getDonacion(paymentId: number) {
+    return this.donacionesRepository.findOneBy({
+      paymentId
+    });
+  }
+
+
+
+  getPaymentDetails(paymentId: number) {
+    return this.mercadoPago.payment.get({
+      id: paymentId
+    })
+  }
+
+
+
+  async sendThankYouEmailTo(donador: Donador, donacion: Donacion) {
+    // mailto: donador.correo
+    // message: gracias por tu donacion {type} de {monto}
+  }
+
 
 
   // se toma 2.89% de tarifas con base en documentacion 

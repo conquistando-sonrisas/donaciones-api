@@ -50,6 +50,7 @@ const throttlerProvider: Provider = {
     DonacionesService,
     mercadoPagoProvider,
     throttlerProvider,
-  ]
+  ],
+  exports: [DonacionesService]
 })
 export class DonacionesModule { }

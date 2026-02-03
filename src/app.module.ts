@@ -7,6 +7,8 @@ import { Donador } from './donaciones/entities/donador.entity';
 import { Donacion } from './donaciones/entities/donacion.entity';
 import { Fiscal } from './donaciones/entities/fiscal.entity';
 import { EncryptionModule } from './encryption/encryption.module';
+import { WebhooksController } from './webhooks/webhooks.controller';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { EncryptionModule } from './encryption/encryption.module';
       }),
       inject: [ConfigService]
     }),
+    WebhooksModule,
   ],
   controllers: [],
   providers: [],

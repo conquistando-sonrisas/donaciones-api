@@ -20,4 +20,7 @@ export class Donacion {
 
   @ManyToOne(() => Donador, donador => donador.donaciones)
   donador: Donador;
+
+  @Column()
+  paymentId: number;
 }
