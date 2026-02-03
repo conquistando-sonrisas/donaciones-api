@@ -1,14 +1,17 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Fiscal {
 
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({
+    type: 'uuid',
+    default: () => 'gen_random_uuid()'
+  })
   id: string;
 
   @Column()
   persona: string;
-  
+
   @Column()
   @Index()
   razonSocial: string;

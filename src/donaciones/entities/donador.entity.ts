@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, OneToMany, OneToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Fiscal } from "./fiscal.entity";
 import { Donacion } from "./donacion.entity";
 
@@ -6,7 +6,10 @@ import { Donacion } from "./donacion.entity";
 @Entity()
 export class Donador {
 
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({
+    type: 'uuid',
+    default: () => 'gen_random_uuid()'
+  })
   id: string;
 
   @Column({ nullable: false })

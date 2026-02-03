@@ -1,11 +1,14 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 import { Donador } from "./donador.entity";
 
 
 @Entity()
 export class Donacion {
 
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({
+    type: 'uuid',
+    default: () => 'gen_random_uuid()'
+  })
   id: string;
 
   @Column()
