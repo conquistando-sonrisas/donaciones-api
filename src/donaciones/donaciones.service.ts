@@ -3,7 +3,7 @@ import { MP_CLIENT } from './mercado-pago.constants';
 import { Payment, PreApproval } from 'mercadopago';
 import { PaymentCreateRequest } from 'mercadopago/dist/clients/payment/create/types';
 import { ConfigService } from '@nestjs/config';
-import { PreApprovalRequest } from 'mercadopago/dist/clients/preApproval/commonTypes';
+import { PreApprovalRequest, PreApprovalResponse } from 'mercadopago/dist/clients/preApproval/commonTypes';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Donador } from './entities/donador.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -12,6 +12,11 @@ import { Fiscal } from './entities/fiscal.entity';
 import { EncryptionService } from 'src/encryption/encryption.service';
 import { PaymentResponse } from 'mercadopago/dist/clients/payment/commonTypes';
 import { Donacion } from './entities/donacion.entity';
+import { MailerService } from '@nestjs-modules/mailer';
+import { RecurringDonacion } from './entities/recurring-donacion.entity';
+import { ActionToken } from './entities/action-token.entity';
+import { addHours } from 'date-fns';
+import jsonwebtoken from 'jsonwebtoken'
 
 
 @Injectable()
@@ -33,9 +38,17 @@ export class DonacionesService {
     @InjectRepository(Donacion)
     private readonly donacionesRepository: Repository<Donacion>,
 
+    @InjectRepository(RecurringDonacion)
+    private readonly recurringRepository: Repository<RecurringDonacion>,
+
     private readonly dataSource: DataSource,
 
-    private readonly encryptionService: EncryptionService
+    private readonly encryptionService: EncryptionService,
+
+    private readonly mailerService: MailerService,
+
+    @InjectRepository(ActionToken)
+    private readonly actionTokenRepository: Repository<ActionToken>,
   ) { }
 
 
@@ -175,29 +188,24 @@ export class DonacionesService {
     }
 
     const donadorId = donacionDetails.external_reference;
-    const donador = await this.donadoresRepository.findOneBy({ id: donadorId });
-
-    if (!donador) {
-      this.logger.error(`No se encontró donador con id: ${donadorId}`);
-      throw new Error('Donador no encontrado');
-    }
+    const donador = await this.donadoresRepository.findOneByOrFail({ id: donadorId });
 
     const donacion = new Donacion();
     donacion.paymentId = donacionDetails.id;
     donacion.monto = donacionDetails.transaction_amount;
     donacion.donador = donador;
     donacion.type = type;
-    
-    const created = await this.donacionesRepository.save(donacion);
+
+    const createdDonacion = await this.donacionesRepository.save(donacion);
     return {
-      donacion,
+      donacion: createdDonacion,
       donador
     }
   }
 
 
 
-  async getDonacion(paymentId: number) {
+  async getDonacionByPaymentId(paymentId: number) {
     return this.donacionesRepository.findOneBy({
       paymentId
     });
@@ -212,10 +220,83 @@ export class DonacionesService {
   }
 
 
+  async getSuscriptionDetails(preapprovalId: string) {
+    return this.mercadoPago.preapproval.get({
+      id: preapprovalId
+    })
+  }
 
-  async sendThankYouEmailTo(donador: Donador, donacion: Donacion) {
-    // mailto: donador.correo
-    // message: gracias por tu donacion {type} de {monto}
+
+
+  async sendThankYouEmailForDonacion(donador: Donador, donacion: Donacion) {
+    // createToken?
+    return this.mailerService.sendMail({
+      to: donador.correo,
+      from: this.configService.getOrThrow<string>('EMAIL_USER'),
+      subject: '¡Muchas gracias por tu donación!',
+      template: 'agradecimiento-donacion',
+      context: {
+        to: donador.correo,
+        nombre: donador.nombre,
+        type: donacion.type === 'monthly' ? 'mensual' : 'única',
+        monto: Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN'
+        }).format(donacion.monto)
+      }
+    })
+  }
+
+
+  private async generateActionToken(idRecurringDonacion: string, action: string, reason: string) {
+    const actionToken = new ActionToken();
+    actionToken.idRecurringDonacion = idRecurringDonacion;
+    actionToken.action = action;
+    actionToken.reason = reason;
+    actionToken.expiresAt = addHours(new Date(), 48);
+    const saved = await this.actionTokenRepository.save(actionToken)
+    return jsonwebtoken.sign({
+      sub: saved.id,
+    },
+      this.configService.getOrThrow<string>('JWT_SECRET'),
+      {
+        expiresIn: '48h'
+      }
+    )
+  }
+
+
+
+  async sendThankYouEmailForRecurringDonacion(donador: Donador, recurring: RecurringDonacion) {
+    const token = await this.generateActionToken(recurring.id, 'cancel', 'cancel-by-email-link');
+    return this.mailerService.sendMail({
+      to: donador.correo,
+      from: this.configService.getOrThrow<string>('EMAIL_USER'),
+      subject: '¡Muchas gracias por registrarte como donador recurrente!',
+      template: 'agradecimiento-donacion-recurring',
+      context: {
+        phone: this.configService.getOrThrow<string>('CONTACT_PHONE'),
+        cancelToken: token,
+        nombre: donador.nombre,
+        to: donador.correo,
+        textMessage: encodeURIComponent('Me gustaría cancelar mi donación recurrente'),
+        monto: Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: 'MXN'
+        }).format(recurring.monto)
+      }
+    })
+  }
+
+
+  async cancelarDonacionRecurrente() {
+    // add id of donador in token
+    // get token
+    // get donador
+    // get donacion and the suscriptionId
+    // update suscriptionId with status of cancelled
+    // return status
+    // send email of cancellation
   }
 
 
@@ -228,8 +309,67 @@ export class DonacionesService {
   }
 
 
+
   private roundToTwo(amount: number) {
     return Math.round((amount + Number.EPSILON) * 100) / 100;
+  }
+
+
+
+  async getRecurringDonacion(mercadoPagoPreapprovalId: string) {
+    return this.recurringRepository.findBy({
+      mercadoPagoPreapprovalId
+    })
+  }
+
+
+  async saveRecurringDonacion(details: PreApprovalResponse) {
+    if (!details.external_reference) {
+      throw new Error('No external reference en preapproval')
+    }
+    if (!details.id) {
+      throw new Error('No id en preapproval');
+    }
+
+    if (!details.auto_recurring?.transaction_amount) {
+      throw new Error('No transaction_amount en preapproval');
+    }
+
+    if (!details.status) {
+      throw new Error('No status in preapproval');
+    }
+
+    const donador = await this.donadoresRepository.findOneByOrFail({ id: details.external_reference });
+
+    const recurring = new RecurringDonacion();
+    recurring.donador = donador;
+    recurring.mercadoPagoPreapprovalId = details.id;
+    recurring.frequencyType = details.auto_recurring?.frequency_type || 'months';
+    recurring.frequency = details.auto_recurring?.frequency || 1;
+    recurring.monto = details.auto_recurring?.transaction_amount;
+    recurring.status = details.status;
+
+    const savedRecurring = await this.recurringRepository.save(recurring)
+
+    return { donador, recurring: savedRecurring };
+  }
+
+
+
+  async generateReportOfDonacionesOfCurrentMonth() {
+    // select donaciones of current month
+    // select donadores
+    // decrypt fiscal data of donadores that need comprobante
+    // create file stream, save it in server?
+    // send file stream to emails in config list
+    // ** if sending email fails, file would be in server
+  }
+
+
+
+  async sendReportToDirectivos() {
+    // generate report
+    // send it to emails configured in env
   }
 
 }

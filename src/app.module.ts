@@ -7,8 +7,14 @@ import { Donador } from './donaciones/entities/donador.entity';
 import { Donacion } from './donaciones/entities/donacion.entity';
 import { Fiscal } from './donaciones/entities/fiscal.entity';
 import { EncryptionModule } from './encryption/encryption.module';
-import { WebhooksController } from './webhooks/webhooks.controller';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import path from 'node:path';
+import { RecurringDonacion } from './donaciones/entities/recurring-donacion.entity';
+import { ActionToken } from './donaciones/entities/action-token.entity';
+
+
 
 @Module({
   imports: [
@@ -19,7 +25,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       throttlers: [{
         name: 'donaciones',
         ttl: 60_000,
-        limit: 10 
+        limit: 10
       }]
     }),
     TypeOrmModule.forRootAsync({
@@ -30,8 +36,38 @@ import { WebhooksModule } from './webhooks/webhooks.module';
         username: config.getOrThrow<string>('DB_USERNAME'),
         password: config.getOrThrow<string>('DB_PASSWORD'),
         database: config.getOrThrow<string>('DB_NAME'),
-        entities: [Donador, Donacion, Fiscal],
+        entities: [
+          Donador, 
+          Donacion, 
+          Fiscal,
+          RecurringDonacion,
+          ActionToken
+        ],
         synchronize: true,
+      }),
+      inject: [ConfigService]
+    }),
+    MailerModule.forRootAsync({
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.getOrThrow<string>('EMAIL_HOST'),
+          port: config.getOrThrow<number>('EMAIL_PORT'),
+          tls: {
+            rejectUnauthorized: false,
+          },
+          secure: config.getOrThrow<number>('EMAIL_PORT') === 465,
+          auth: {
+            user: config.getOrThrow<string>('EMAIL_USER'),
+            pass: config.getOrThrow<string>('EMAIL_PASS')
+          }
+        },
+        template: {
+          dir: path.join(__dirname, 'templates'),
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true
+          }
+        }
       }),
       inject: [ConfigService]
     }),

@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, Index, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
 import { Donador } from "./donador.entity";
 
 
@@ -21,9 +21,17 @@ export class Donacion {
   @CreateDateColumn()
   createdAt: Date;
 
+
+  @Column({ type: 'varchar', nullable: true })
+  idDonador: string | null;
+
   @ManyToOne(() => Donador, donador => donador.donaciones)
+  @JoinColumn({ name: 'idDonador' })
   donador: Donador;
 
   @Column()
   paymentId: number;
+
+  @Column({ type: 'varchar', nullable: true })
+  preapprovalId: string | null;
 }

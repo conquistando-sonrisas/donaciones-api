@@ -11,6 +11,8 @@ import { Donador } from './entities/donador.entity';
 import { Donacion } from './entities/donacion.entity';
 import { Fiscal } from './entities/fiscal.entity';
 import { EncryptionModule } from 'src/encryption/encryption.module';
+import { RecurringDonacion } from './entities/recurring-donacion.entity';
+import { ActionToken } from './entities/action-token.entity';
 
 const mercadoPagoProvider: Provider = {
   provide: MP_CLIENT,
@@ -43,7 +45,13 @@ const throttlerProvider: Provider = {
 @Module({
   imports: [
     EncryptionModule,
-    TypeOrmModule.forFeature([Donador, Donacion, Fiscal]),
+    TypeOrmModule.forFeature([
+      Donador,
+      Donacion,
+      Fiscal,
+      RecurringDonacion,
+      ActionToken
+    ]),
   ],
   controllers: [DonacionesController],
   providers: [

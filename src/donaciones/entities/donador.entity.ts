@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, OneToMany, OneToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Fiscal } from "./fiscal.entity";
 import { Donacion } from "./donacion.entity";
+import { RecurringDonacion } from "./recurring-donacion.entity";
 
 
 @Entity()
@@ -46,4 +47,7 @@ export class Donador {
 
   @OneToMany(() => Donacion, donacion => donacion.donador)
   donaciones: Donacion[]
+
+  @OneToMany(() => RecurringDonacion, recurringDonacion => recurringDonacion.donador)
+  recurrionDonaciones: RecurringDonacion[];
 }

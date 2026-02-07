@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gracias por tu registro como donador recurrente | Conquistando Sonrisas A.C.</title>
+</head>
+
+<body>
+  <h2>
+    ¡Hola {{nombre}}!
+  </h2>
+  <p>
+    Muchas gracias por registrarte como donador recurrente.
+  </p>
+
+  <p>
+    Si lo deseas, puedes cancelar tu donacion recurrente con <a
+      href="https://conquistandosonrisas.org/donar/cancelar?token={{cancelToken}}">este enlace</a>
+  </p>
+
+  <p>
+    O para cualquier duda, también puedes mandarnos un mensaje por <a
+      href="https://wa.me/{{phone}}?text={{textMessage}}">WhatsApp</a>.
+  </p>
+
+<caption>
+    Este correo fue enviado a {{to}} desde una cuenta automática que no recibe respuestas.
+  </caption>
+</body>
+
+</html>

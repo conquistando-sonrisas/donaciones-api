@@ -1,19 +1,33 @@
 import { Type } from "class-transformer";
-import { IsDefined, IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
+import { IsDefined, IsNegative, IsNotEmpty, IsNumber, IsNumberString, IsString, ValidateNested } from "class-validator";
 
 class NestedDataDto {
 
   @IsDefined()
-  @IsNumber()
+  @IsNumberString()
   id: number;
 }
 
-export class CreatePaymentWebhookDto {
+export class MercadoPagoWebhookDto {
 
   @IsDefined()
   @ValidateNested()
   @Type(() => NestedDataDto)
   data: NestedDataDto;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsDefined()
+  type: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsDefined()
+  action: string;
+
+  @IsDefined()
+  @IsNumberString()
+  id: number;
 }
 
 export class CreatePaymentWebhookSignaturesDto {
