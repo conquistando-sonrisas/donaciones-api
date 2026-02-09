@@ -19,7 +19,9 @@ async function bootstrap() {
 
   app.enableCors();
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({
+    enableDebugMessages: true
+  }));
 
   await app.listen(process.env.PORT ?? 8080);
 }

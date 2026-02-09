@@ -50,8 +50,9 @@ export class CreateDonadorDto {
   correo: string;
 
 
-  @IsNotEmpty()
   @IsOptional()
+  @IsString()
+  @IsNotEmpty()
   @Transform(({ value }) => value?.trim())
   telefono: string;
 

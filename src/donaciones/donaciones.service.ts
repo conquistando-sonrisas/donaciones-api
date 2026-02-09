@@ -155,8 +155,8 @@ export class DonacionesService {
     try {
       const res = await this.mercadoPago.preapproval.create({
         body: {
-          preapproval_plan_id: this.configService.get<string>('DONACIONES_RECURRENTES_PREAPPROVAL_PLAN_ID'),
-          card_token_id: donacion.card_token_id,
+          preapproval_plan_id: this.configService.getOrThrow<string>('DONACIONES_RECURRENTES_PREAPPROVAL_PLAN_ID'),
+          card_token_id: donacion.token,
           payer_email: donador.correo,
           auto_recurring: {
             frequency: 1,
@@ -164,6 +164,8 @@ export class DonacionesService {
             currency_id: 'MXN',
             transaction_amount: donacion.acceptedFees ? donacion.amount + fees : donacion.amount
           },
+          reason: 'Donación mensual a Conquistando Sonrisas A.C.',
+          external_reference: donador.donadorId
         }
       })
 
@@ -391,14 +393,15 @@ type BodyOneTimeDonationArgs = {
 
 
 type BodyMonthlyDonationArgs = {
-  donacion: Pick<PreApprovalRequest, 'card_token_id'> & {
-    amount: number,
-    acceptedFees: boolean,
+  donacion: {
+    amount: number;
+    acceptedFees: boolean;
+    token: string;
   },
   donador: {
-    correo: string,
-    nombre: string,
-    apellido: string,
-    donadorId: string,
+    correo: string;
+    nombre: string;
+    apellido: string;
+    donadorId: string;
   }
 }
