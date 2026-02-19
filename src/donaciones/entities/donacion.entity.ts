@@ -30,7 +30,7 @@ export class Donacion {
   donador: Donador;
 
   @Column()
-  paymentId: number;
+  paymentId: string;
 
   @Column({ type: 'varchar', nullable: true })
   preapprovalId: string | null;

@@ -49,11 +49,4 @@ export class DonacionesController {
     return paymentDetails;
   }
 
-  /**
-   * TODO
-   * getDonacionToCancel()
-   * cancelRecurringDonacion() //pause recurring donation?
-   * 
-   */
-
 }

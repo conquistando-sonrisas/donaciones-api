@@ -5,7 +5,7 @@ class NestedDataDto {
 
   @IsDefined()
   @IsNumberString()
-  id: number;
+  id: string;
 }
 
 export class MercadoPagoWebhookDto {
@@ -27,7 +27,7 @@ export class MercadoPagoWebhookDto {
 
   @IsDefined()
   @IsNumberString()
-  id: number;
+  id: string;
 }
 
 export class CreatePaymentWebhookSignaturesDto {

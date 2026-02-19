@@ -15,8 +15,10 @@ import { Donacion } from './entities/donacion.entity';
 import { MailerService } from '@nestjs-modules/mailer';
 import { RecurringDonacion } from './entities/recurring-donacion.entity';
 import { ActionToken } from './entities/action-token.entity';
-import { addHours } from 'date-fns';
+import { addHours, endOfMonth } from 'date-fns';
 import jsonwebtoken from 'jsonwebtoken'
+import { createReadStream, existsSync } from 'node:fs';
+import path, { basename } from 'node:path';
 
 
 @Injectable()
@@ -193,7 +195,7 @@ export class DonacionesService {
     const donador = await this.donadoresRepository.findOneByOrFail({ id: donadorId });
 
     const donacion = new Donacion();
-    donacion.paymentId = donacionDetails.id;
+    donacion.paymentId = donacionDetails.id.toString();
     donacion.monto = donacionDetails.transaction_amount;
     donacion.donador = donador;
     donacion.type = type;
@@ -207,7 +209,7 @@ export class DonacionesService {
 
 
 
-  async getDonacionByPaymentId(paymentId: number) {
+  async getDonacionByPaymentId(paymentId: string) {
     return this.donacionesRepository.findOneBy({
       paymentId
     });
@@ -215,7 +217,7 @@ export class DonacionesService {
 
 
 
-  getPaymentDetails(paymentId: number) {
+  getPaymentDetails(paymentId: string) {
     return this.mercadoPago.payment.get({
       id: paymentId
     })
@@ -236,7 +238,7 @@ export class DonacionesService {
       to: donador.correo,
       from: this.configService.getOrThrow<string>('EMAIL_USER'),
       subject: '¡Muchas gracias por tu donación!',
-      template: 'agradecimiento-donacion',
+      template: path.join(__dirname, '..', 'templates', 'agradecimiento-donacion'),
       context: {
         to: donador.correo,
         nombre: donador.nombre,
@@ -275,7 +277,7 @@ export class DonacionesService {
       to: donador.correo,
       from: this.configService.getOrThrow<string>('EMAIL_USER'),
       subject: '¡Muchas gracias por registrarte como donador recurrente!',
-      template: 'agradecimiento-donacion-recurring',
+      template: path.join(__dirname, '..', 'templates', 'agradecimiento-donacion-recurring'),
       context: {
         phone: this.configService.getOrThrow<string>('CONTACT_PHONE'),
         cancelToken: token,
@@ -358,22 +360,39 @@ export class DonacionesService {
 
 
 
-  async generateReportOfDonacionesOfCurrentMonth() {
-    // select donaciones of current month
-    // select donadores
-    // decrypt fiscal data of donadores that need comprobante
-    // create file stream, save it in server?
-    // send file stream to emails in config list
-    // ** if sending email fails, file would be in server
+  async getDonacionesOfCurrentMonth() {
+    const currDate = new Date();
+    const donaciones = await this.donacionesRepository.createQueryBuilder('d')
+      .where(
+        'd.createdAt >= :start', { start: new Date(currDate.getFullYear(), currDate.getMonth(), 1) }
+      )
+      .leftJoinAndSelect('d.donador', 'donador')
+      .leftJoinAndSelect('donador.fiscal', 'fiscal')
+      .andWhere(
+        'd.createdAt <= :end', { end: endOfMonth(currDate) }
+      )
+      .orderBy('d.createdAt', 'ASC')
+      .getMany();
+
+    return donaciones;
   }
 
 
 
-  async sendReportToDirectivos() {
-    // generate report
-    // send it to emails configured in env
+  async sendReportFile(filepath: string, emails: string[]) {
+    if (!filepath) {
+      console.log('NOOO')
+    }
+    return this.mailerService.sendMail({
+      to: emails,
+      from: this.configService.getOrThrow<string>('EMAIL_USER'),
+      subject: 'Reporte de donaciones',
+      attachments: [{
+        filename: basename(filepath),
+        content: createReadStream(filepath)
+      }]
+    })
   }
-
 }
 
 

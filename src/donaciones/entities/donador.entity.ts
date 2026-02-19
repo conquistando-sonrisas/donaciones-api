@@ -43,7 +43,7 @@ export class Donador {
 
   @OneToOne(() => Fiscal)
   @JoinColumn()
-  fiscal: Fiscal;
+  fiscal: Fiscal | null;
 
   @OneToMany(() => Donacion, donacion => donacion.donador)
   donaciones: Donacion[]

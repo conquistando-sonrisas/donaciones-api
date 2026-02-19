@@ -13,6 +13,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
 import path from 'node:path';
 import { RecurringDonacion } from './donaciones/entities/recurring-donacion.entity';
 import { ActionToken } from './donaciones/entities/action-token.entity';
+import { ReportsRunnerCommand } from './commands/donaciones.command';
 
 
 
@@ -37,8 +38,8 @@ import { ActionToken } from './donaciones/entities/action-token.entity';
         password: config.getOrThrow<string>('DB_PASSWORD'),
         database: config.getOrThrow<string>('DB_NAME'),
         entities: [
-          Donador, 
-          Donacion, 
+          Donador,
+          Donacion,
           Fiscal,
           RecurringDonacion,
           ActionToken
@@ -60,13 +61,6 @@ import { ActionToken } from './donaciones/entities/action-token.entity';
             user: config.getOrThrow<string>('EMAIL_USER'),
             pass: config.getOrThrow<string>('EMAIL_PASS')
           }
-        },
-        template: {
-          dir: path.join(__dirname, 'templates'),
-          adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true
-          }
         }
       }),
       inject: [ConfigService]
@@ -74,6 +68,8 @@ import { ActionToken } from './donaciones/entities/action-token.entity';
     WebhooksModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    ...ReportsRunnerCommand.registerWithSubCommands()
+  ],
 })
 export class AppModule { }
