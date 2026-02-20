@@ -51,7 +51,7 @@ export class WebhooksController {
 
     if (body.type === 'subscription_preapproval') {
       const mercadoPagoPreapprovalId = body.id.toString();
-      const existingRecurringDonacion = await this.donacionesService.getRecurringDonacion(mercadoPagoPreapprovalId);
+      const existingRecurringDonacion = await this.donacionesService.getRecurringDonacionByMercadoPagoId(mercadoPagoPreapprovalId);
 
       if (existingRecurringDonacion) return;
 

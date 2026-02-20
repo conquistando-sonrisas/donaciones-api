@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateOneTimeDonacionDto as CreateDonacionDto } from './dtos/create-donacion.dto';
 import { DonacionesService } from './donaciones.service';
+import { ActionTokenGuard } from './action-token.guard';
+import type { Request } from 'express';
 
 
 
@@ -47,6 +49,15 @@ export class DonacionesController {
     });
 
     return paymentDetails;
+  }
+
+
+  @UseGuards(ActionTokenGuard)
+  @Get('/tokens/:token')
+  async getDonacionWithToken(@Req() req: Request) {
+    const idActionToken = (req as any).idActionToken;
+    const recurring = await this.donacionesService.getRecurringDonacionByActionTokenId(idActionToken);
+    return { recurring };
   }
 
 }

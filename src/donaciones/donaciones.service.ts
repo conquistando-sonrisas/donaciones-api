@@ -252,7 +252,7 @@ export class DonacionesService {
   }
 
 
-  private async generateActionToken(idRecurringDonacion: string, action: string, reason: string) {
+  async generateActionToken(idRecurringDonacion: string, action: string, reason: string) {
     const actionToken = new ActionToken();
     actionToken.idRecurringDonacion = idRecurringDonacion;
     actionToken.action = action;
@@ -264,7 +264,7 @@ export class DonacionesService {
     },
       this.configService.getOrThrow<string>('JWT_SECRET'),
       {
-        expiresIn: '48h'
+        expiresIn: '10s'
       }
     )
   }
@@ -320,9 +320,35 @@ export class DonacionesService {
 
 
 
-  async getRecurringDonacion(mercadoPagoPreapprovalId: string) {
+  async getRecurringDonacionByMercadoPagoId(mercadoPagoPreapprovalId: string) {
     return this.recurringRepository.findBy({
       mercadoPagoPreapprovalId
+    })
+  }
+
+
+
+  async getRecurringDonacionByActionTokenId(idActionToken: string) {
+    return this.actionTokenRepository.findOne({
+      where: {
+        id: idActionToken
+      },
+      relations: {
+        recurringDonacion: {
+          donador: true
+        }
+      },
+      select: {
+        id: true,
+        expiresAt: true,
+        recurringDonacion: {
+          monto: true,
+          status: true,
+          donador: {
+            nombre: true
+          }
+        }
+      }
     })
   }
 
