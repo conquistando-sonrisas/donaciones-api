@@ -61,6 +61,13 @@ import { ReportsRunnerCommand } from './commands/donaciones.command';
             user: config.getOrThrow<string>('EMAIL_USER'),
             pass: config.getOrThrow<string>('EMAIL_PASS')
           }
+        },
+        template: {
+          dir: path.join(process.cwd(), 'templates'),
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true
+          }
         }
       }),
       inject: [ConfigService]

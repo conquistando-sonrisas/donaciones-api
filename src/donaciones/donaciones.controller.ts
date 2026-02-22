@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Inject, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, ConflictException, Controller, Get, Inject, NotFoundException, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateOneTimeDonacionDto as CreateDonacionDto } from './dtos/create-donacion.dto';
 import { DonacionesService } from './donaciones.service';
-import { ActionTokenGuard } from './action-token.guard';
+import { ActionTokenGuard } from './guards/action-token.guard';
 import type { Request } from 'express';
+import { ExpiredActionTokenGuard } from './guards/expired-action-token-guard';
 
 
 
@@ -52,12 +53,33 @@ export class DonacionesController {
   }
 
 
+
   @UseGuards(ActionTokenGuard)
   @Get('/tokens/:token')
   async getDonacionWithToken(@Req() req: Request) {
     const idActionToken = (req as any).idActionToken;
     const recurring = await this.donacionesService.getRecurringDonacionByActionTokenId(idActionToken);
     return { recurring };
+  }
+
+
+
+  @UseGuards(ExpiredActionTokenGuard)
+  @Post('/tokens/:token/resend')
+  async resendCancelationToke(@Req() req: Request) {
+    const idActionToken = (req as any).idActionToken;
+    const recurring = await this.donacionesService.getRecurringDonacionByActionTokenId(idActionToken);
+    if (!recurring) {
+      throw new NotFoundException();
+    }
+
+    if (recurring.recurringDonacion.status === 'canceled') {
+      throw new ConflictException('Donación ha sido cancelada');
+    }
+
+    await this.donacionesService.sendCancelTokenTo(recurring.recurringDonacion.donador, recurring.recurringDonacion.id);
+    
+    return;
   }
 
 }

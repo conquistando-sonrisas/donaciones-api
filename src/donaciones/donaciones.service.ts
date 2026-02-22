@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { PreApprovalRequest, PreApprovalResponse } from 'mercadopago/dist/clients/preApproval/commonTypes';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Donador } from './entities/donador.entity';
-import { DataSource, Repository } from 'typeorm';
+import { CancellationToken, DataSource, Repository } from 'typeorm';
 import { CreateDonadorDto } from './dtos/create-donor.dto';
 import { Fiscal } from './entities/fiscal.entity';
 import { EncryptionService } from 'src/encryption/encryption.service';
@@ -264,7 +264,7 @@ export class DonacionesService {
     },
       this.configService.getOrThrow<string>('JWT_SECRET'),
       {
-        expiresIn: '10s'
+        expiresIn: '48h'
       }
     )
   }
@@ -272,7 +272,7 @@ export class DonacionesService {
 
 
   async sendThankYouEmailForRecurringDonacion(donador: Donador, recurring: RecurringDonacion) {
-    const token = await this.generateActionToken(recurring.id, 'cancel', 'cancel-by-email-link');
+    const token = await this.generateActionToken(recurring.id, 'cancel', 'initial-cancel-token');
     return this.mailerService.sendMail({
       to: donador.correo,
       from: this.configService.getOrThrow<string>('EMAIL_USER'),
@@ -290,6 +290,26 @@ export class DonacionesService {
         }).format(recurring.monto)
       }
     })
+  }
+
+
+  async sendCancelTokenTo(donador: Donador, idRecurringDonacion: string) {
+    const token = await this.generateActionToken(idRecurringDonacion, 'cancel', 'resend-cancel-token');
+    await this.mailerService.sendMail({
+      to: donador.correo,
+      from: this.configService.getOrThrow<string>('EMAIL_USER'),
+      subject: 'Enlace de cancelación de donación recurrente',
+      template: 'cancelacion-donacion-recurrente',
+      context: {
+        to: donador.correo,
+        nombre: donador.nombre,
+        cancelToken: token,
+        phone: this.configService.getOrThrow<string>('CONTACT_PHONE'),
+        textMessage: encodeURIComponent('Me gustaría cancelar mi donación recurrente'),
+      }
+    });
+
+    this.logger.log('Token para cancelar donación recurrente con id ' + idRecurringDonacion + ' fue enviado.')
   }
 
 
@@ -342,10 +362,12 @@ export class DonacionesService {
         id: true,
         expiresAt: true,
         recurringDonacion: {
+          id: true,
           monto: true,
           status: true,
           donador: {
-            nombre: true
+            nombre: true,
+            correo: true
           }
         }
       }
