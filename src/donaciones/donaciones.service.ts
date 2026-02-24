@@ -233,7 +233,6 @@ export class DonacionesService {
 
 
   async sendThankYouEmailForDonacion(donador: Donador, donacion: Donacion) {
-    // createToken?
     return this.mailerService.sendMail({
       to: donador.correo,
       from: this.configService.getOrThrow<string>('EMAIL_USER'),
@@ -313,14 +312,40 @@ export class DonacionesService {
   }
 
 
-  async cancelarDonacionRecurrente() {
-    // add id of donador in token
-    // get token
-    // get donador
-    // get donacion and the suscriptionId
-    // update suscriptionId with status of cancelled
-    // return status
-    // send email of cancellation
+  async cancelarDonacionRecurrente(idRecurringDonacion: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const recurring = await queryRunner.manager.findOneByOrFail(RecurringDonacion, {
+        id: idRecurringDonacion
+      })
+
+      await this.mercadoPago.preapproval.update({
+        id: recurring.mercadoPagoPreapprovalId,
+        body: {
+          status: 'cancelled'
+        }
+      })
+
+      await queryRunner.manager.update(RecurringDonacion, {
+        id: idRecurringDonacion,
+      }, {
+        status: 'canceled',
+        cancelledAt: new Date()
+      });
+
+      await queryRunner.commitTransaction();
+
+    } catch (err) {
+      this.logger.error(err);
+      await queryRunner.rollbackTransaction();
+      throw new Error('Hubo un error al cancelar donación recurrente')
+    } finally {
+      await queryRunner.release();
+    }
   }
 
 

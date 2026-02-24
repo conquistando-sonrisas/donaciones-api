@@ -78,7 +78,23 @@ export class DonacionesController {
     }
 
     await this.donacionesService.sendCancelTokenTo(recurring.recurringDonacion.donador, recurring.recurringDonacion.id);
-    
+
+    return;
+  }
+
+
+
+  @UseGuards(ActionTokenGuard)
+  @Post('/cancelar/:token')
+  async cancelRecurringDonacion(@Req() req: Request) {
+    const idActionToken = (req as any).idActionToken;
+    const recurring = await this.donacionesService.getRecurringDonacionByActionTokenId(idActionToken);
+    if (!recurring) {
+      throw new NotFoundException();
+    }
+
+    await this.donacionesService.cancelarDonacionRecurrente(recurring.recurringDonacion.id)
+
     return;
   }
 
