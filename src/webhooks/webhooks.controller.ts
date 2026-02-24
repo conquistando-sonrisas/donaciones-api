@@ -34,6 +34,7 @@ export class WebhooksController {
       }
 
       const details = await this.donacionesService.getPaymentDetails(paymentId);
+      this.logger.log(JSON.stringify(details, null, 2))
       console.log(JSON.stringify(details, null, 2));
       const { donacion, donador } = await this.donacionesService.saveDonacion(donacionType, details);
 
@@ -57,7 +58,7 @@ export class WebhooksController {
 
       const details = await this.donacionesService.getSuscriptionDetails(mercadoPagoPreapprovalId);
       console.log(JSON.stringify(details, null, 2));
-
+      this.logger.log(JSON.stringify(details, null, 2))
       const { recurring, donador } = await this.donacionesService.saveRecurringDonacion(details);
       setImmediate(async () => {
         try {
@@ -71,7 +72,7 @@ export class WebhooksController {
     }
 
     console.log('UNHANDLE WEBHOOK', JSON.stringify(body, null, 2));
-    
+
     return;
   }
 
