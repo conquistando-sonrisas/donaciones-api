@@ -1,4 +1,4 @@
-import { Body, ConflictException, Controller, Get, Inject, NotFoundException, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, ConflictException, Controller, Get, Inject, Logger, NotFoundException, Post, Req, UseGuards } from '@nestjs/common';
 import { CreateOneTimeDonacionDto as CreateDonacionDto } from './dtos/create-donacion.dto';
 import { DonacionesService } from './donaciones.service';
 import { ActionTokenGuard } from './guards/action-token.guard';
@@ -12,6 +12,7 @@ import { ExpiredActionTokenGuard } from './guards/expired-action-token-guard';
   version: '1'
 })
 export class DonacionesController {
+  private readonly logger = new Logger(DonacionesController.name, { timestamp: true })
 
   constructor(
     private readonly donacionesService: DonacionesService
@@ -96,6 +97,14 @@ export class DonacionesController {
     await this.donacionesService.cancelarDonacionRecurrente(recurring.recurringDonacion.id)
 
     return;
+  }
+
+
+  @Get('/logs')
+  async testLogs() {
+    this.logger.log('GET /logs')
+    this.logger.log({ an: 'object' })
+
   }
 
 }

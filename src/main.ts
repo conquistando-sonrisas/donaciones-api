@@ -24,7 +24,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({
     enableDebugMessages: true
   }));
-
+  console.log('server starting', { hello: 'world' })
   await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap();
