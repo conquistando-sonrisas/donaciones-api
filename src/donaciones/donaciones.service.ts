@@ -123,6 +123,7 @@ export class DonacionesService {
           payment_method_id: donacion.payment_method_id,
           issuer_id: donacion.issuer_id,
           external_reference: donador.donadorId,
+          notification_url: `${this.configService.getOrThrow<string>('MP_NOTIFICATION_URL')}/one-time`,
           payer: {
             first_name: donador.nombre,
             last_name: donador.apellido,
@@ -167,7 +168,7 @@ export class DonacionesService {
             transaction_amount: donacion.acceptedFees ? donacion.amount + fees : donacion.amount
           },
           reason: 'Donación mensual a Conquistando Sonrisas A.C.',
-          external_reference: donador.donadorId
+          external_reference: donador.donadorId,
         }
       })
 
