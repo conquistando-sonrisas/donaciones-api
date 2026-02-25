@@ -239,7 +239,7 @@ export class DonacionesService {
       to: donador.correo,
       from: this.configService.getOrThrow<string>('EMAIL_USER'),
       subject: '¡Muchas gracias por tu donación!',
-      template: path.join(__dirname, '..', 'templates', 'agradecimiento-donacion'),
+      template: 'agradecimiento-donacion',
       context: {
         to: donador.correo,
         nombre: donador.nombre,
@@ -278,7 +278,7 @@ export class DonacionesService {
       to: donador.correo,
       from: this.configService.getOrThrow<string>('EMAIL_USER'),
       subject: '¡Muchas gracias por registrarte como donador recurrente!',
-      template: path.join(__dirname, '..', 'templates', 'agradecimiento-donacion-recurring'),
+      template: 'agradecimiento-donacion-recurring',
       context: {
         phone: this.configService.getOrThrow<string>('CONTACT_PHONE'),
         cancelToken: token,
