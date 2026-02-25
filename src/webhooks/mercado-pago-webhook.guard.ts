@@ -24,6 +24,8 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const [ts, v1] = (signature as string).split(',')
     const timestamp = ts.split('=')[1].trim();
     const hash = v1.split('=')[1].trim();
+    this.logger.log('BODY')
+    this.logger.log(req.body)
     const dataId = req.body.data.id;
     const manifest = `id:${dataId};request-id:${requestId};ts:${timestamp};`;
     
