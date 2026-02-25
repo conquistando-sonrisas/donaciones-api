@@ -27,8 +27,9 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     this.logger.log('BODY')
     this.logger.log(req.body)
     const dataId = req.body.data?.id ? req.body.data?.id : req.body.data?.resource;
-    
+
     if (!dataId) {
+      this.logger.log('NO DATA ID');
       return false;
     }
 
