@@ -34,4 +34,8 @@ export class Donacion {
 
   @Column({ type: 'varchar', nullable: true })
   preapprovalId: string | null;
+
+
+  @Column({ type: 'varchar', nullable: true, default: null })
+  status: string | null;
 }

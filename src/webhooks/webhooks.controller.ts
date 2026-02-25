@@ -36,9 +36,10 @@ export class WebhooksController {
 
         const details = await this.donacionesService.getPaymentDetails(paymentId);
         this.logger.log(JSON.stringify(details, null, 2))
+        this.logger.log('BEFORE SAVE DONACION')
         console.log(JSON.stringify(details, null, 2));
         const { donacion, donador } = await this.donacionesService.saveDonacion(donacionType, details);
-
+        this.logger.log('AFTER SAVE DONACION')
         setImmediate(async () => {
           try {
             await this.donacionesService.sendThankYouEmailForDonacion(donador, donacion);

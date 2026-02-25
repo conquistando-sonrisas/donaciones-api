@@ -191,7 +191,7 @@ export class DonacionesService {
     if (!donacionDetails.id || !donacionDetails.transaction_amount) {
       throw new Error('Invalid')
     }
-
+    this.logger.debug(JSON.stringify(donacionDetails))
     const donadorId = donacionDetails.external_reference;
     const donador = await this.donadoresRepository.findOneByOrFail({ id: donadorId });
 
@@ -200,6 +200,7 @@ export class DonacionesService {
     donacion.monto = donacionDetails.transaction_amount;
     donacion.donador = donador;
     donacion.type = type;
+    donacion.status = `${donacionDetails?.status}::${donacionDetails?.status_detail}`;
 
     const createdDonacion = await this.donacionesRepository.save(donacion);
     return {
