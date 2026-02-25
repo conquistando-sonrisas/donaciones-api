@@ -13,7 +13,9 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const donacionType = req.params.type as 'one-time' | 'monthly';
     const signature = req.headers['x-signature'];
     const requestId = req.headers['x-request-id'];
-
+    this.logger.log(donacionType);
+    this.logger.log(signature);
+    this.logger.log(requestId);
     if (!requestId || !signature || !donacionType) {
       throw new BadRequestException();
     }
