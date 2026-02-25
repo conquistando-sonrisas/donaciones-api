@@ -24,6 +24,7 @@ export class WebhooksController {
     @Body() body: MercadoPagoWebhookDto,
     @Param('type') donacionType: 'one-time' | 'monthly'
   ) {
+    this.logger.log('IN CONTROLLER FUNCTION')
     try {
       if (body.type === 'payment') {
         const paymentId = body.data.id;
