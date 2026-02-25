@@ -15,7 +15,7 @@ export class Donacion {
   @Index()
   type: string;
 
-  @Column()
+  @Column({ type: 'double precision' })
   monto: number;
 
   @CreateDateColumn()
