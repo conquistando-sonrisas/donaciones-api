@@ -26,8 +26,8 @@ export class MercadoPagoWebhookDto {
   action: string;
 
   @IsDefined()
-  @IsNumberString()
-  id: string;
+  @IsNumber()
+  id: number;
 }
 
 export class CreatePaymentWebhookSignaturesDto {
