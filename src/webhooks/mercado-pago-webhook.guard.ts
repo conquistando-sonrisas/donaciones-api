@@ -49,6 +49,7 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const hmac = createHmac('sha256', webhookSecretKey);
     hmac.update(manifest);
     const sha = hmac.digest('hex');
+    this.logger.log('comparing hashes', sha, hash)
     if (sha !== hash) {
       this.logger.warn('Los hashes en la peticion son invalidos')
       return false
