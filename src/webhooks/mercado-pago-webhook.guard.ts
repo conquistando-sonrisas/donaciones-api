@@ -26,7 +26,12 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const hash = v1.split('=')[1].trim();
     this.logger.log('BODY')
     this.logger.log(req.body)
-    const dataId = req.body.data.id;
+    const dataId = req.body.data?.id ? req.body.data?.id : req.body.data?.resource;
+    
+    if (!dataId) {
+      return false;
+    }
+
     const manifest = `id:${dataId};request-id:${requestId};ts:${timestamp};`;
     
     const webhookSecretKey = donacionType === 'one-time'
