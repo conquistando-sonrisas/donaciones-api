@@ -38,7 +38,8 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const webhookSecretKey = donacionType === 'one-time'
       ? process.env.WEBHOOK_DONACIONES_UNICAS_KEY
       : process.env.WEBHOOK_DONACIONES_RECURRENTES_KEY;
-
+    
+    this.logger.debug('USING', webhookSecretKey)
     if (!webhookSecretKey) {
       this.logger.error(
         'Webhook secret key no fue definido, procura que WEBHOOK_DONACIONES_UNICAS_KEY y WEBHOOK_DONACIONES_RECURRENTES_KEY se encuentren en el archivo .env'
