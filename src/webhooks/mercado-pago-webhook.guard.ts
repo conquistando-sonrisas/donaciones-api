@@ -13,9 +13,6 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const donacionType = req.params.type as 'one-time' | 'monthly';
     const signature = req.headers['x-signature'];
     const requestId = req.headers['x-request-id'];
-    this.logger.log(donacionType);
-    this.logger.log(signature);
-    this.logger.log(requestId);
     if (!requestId || !signature || !donacionType) {
       throw new BadRequestException();
     }
@@ -24,22 +21,18 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const [ts, v1] = (signature as string).split(',')
     const timestamp = ts.split('=')[1].trim();
     const hash = v1.split('=')[1].trim();
-    this.logger.log('BODY')
-    this.logger.log(req.body)
-    const dataId = req.body.data?.id ? req.body.data?.id : req.body?.resource;
+    const dataId = req.body.data?.id;
 
     if (!dataId) {
-      this.logger.log('NO DATA ID');
       return false;
     }
-
+    
     const manifest = `id:${dataId};request-id:${requestId};ts:${timestamp};`;
     
     const webhookSecretKey = donacionType === 'one-time'
       ? process.env.WEBHOOK_DONACIONES_UNICAS_KEY
       : process.env.WEBHOOK_DONACIONES_RECURRENTES_KEY;
     
-    this.logger.debug('USING', webhookSecretKey)
     if (!webhookSecretKey) {
       this.logger.error(
         'Webhook secret key no fue definido, procura que WEBHOOK_DONACIONES_UNICAS_KEY y WEBHOOK_DONACIONES_RECURRENTES_KEY se encuentren en el archivo .env'
@@ -50,7 +43,7 @@ export class MercadoPagoWebhookGuard implements CanActivate {
     const hmac = createHmac('sha256', webhookSecretKey);
     hmac.update(manifest);
     const sha = hmac.digest('hex');
-    this.logger.log('comparing hashes', sha, hash)
+
     if (sha !== hash) {
       this.logger.warn('Los hashes en la peticion son invalidos')
       return false

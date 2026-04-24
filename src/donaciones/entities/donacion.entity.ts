@@ -21,7 +21,6 @@ export class Donacion {
   @CreateDateColumn()
   createdAt: Date;
 
-
   @Column({ type: 'varchar', nullable: true })
   idDonador: string | null;
 

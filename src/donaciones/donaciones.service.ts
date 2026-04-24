@@ -19,6 +19,8 @@ import { addHours, endOfMonth } from 'date-fns';
 import jsonwebtoken from 'jsonwebtoken'
 import { createReadStream, existsSync } from 'node:fs';
 import path, { basename } from 'node:path';
+import { ReturningResultsEntityUpdator } from 'typeorm/query-builder/ReturningResultsEntityUpdator.js';
+import { PreApprovalResults } from 'mercadopago/dist/clients/preApproval/search/types';
 
 
 @Injectable()
@@ -187,20 +189,26 @@ export class DonacionesService {
 
 
 
-  async saveDonacion(type: 'one-time' | 'monthly', donacionDetails: PaymentResponse) {
-    if (!donacionDetails.id || !donacionDetails.transaction_amount) {
+  async saveDonacion(type: 'one-time' | 'monthly', donacionDetails: { payment: PaymentResponse, suscription: PreApprovalResponse | null }) {
+    const { payment, suscription = null } = donacionDetails;
+
+    if (!payment.id || !payment.transaction_amount) {
       throw new Error('Invalid')
     }
-    this.logger.debug(JSON.stringify(donacionDetails))
-    const donadorId = donacionDetails.external_reference;
+
+    const donadorId = payment.external_reference;
     const donador = await this.donadoresRepository.findOneByOrFail({ id: donadorId });
 
     const donacion = new Donacion();
-    donacion.paymentId = donacionDetails.id.toString();
-    donacion.monto = donacionDetails.transaction_amount;
+    donacion.paymentId = payment.id.toString();
+    donacion.monto = payment.transaction_amount;
     donacion.donador = donador;
     donacion.type = type;
-    donacion.status = `${donacionDetails?.status}::${donacionDetails?.status_detail}`;
+    donacion.status = `${payment?.status}::${payment?.status_detail}`;
+
+    if (suscription?.id) {
+      donacion.preapprovalId = suscription.id;
+    }
 
     const createdDonacion = await this.donacionesRepository.save(donacion);
     return {
@@ -230,6 +238,31 @@ export class DonacionesService {
     return this.mercadoPago.preapproval.get({
       id: preapprovalId
     })
+  }
+
+
+  async getSuscriptionDetailsByPayerId(payerId: number) {
+    const search = await this.mercadoPago.preapproval.search({
+      options: {
+        payer_id: payerId,
+        preapproval_plan_id: this.configService.getOrThrow<string>('DONACIONES_RECURRENTES_PREAPPROVAL_PLAN_ID')
+      }
+    })
+    let suscription: PreApprovalResults | null = null;
+
+    if (search.results) {
+      suscription = search.results[0];
+    }
+
+    if (!suscription?.id) {
+      return null;
+    }
+
+    const details = await this.mercadoPago.preapproval.get({
+      id: suscription.id
+    })
+
+    return details;
   }
 
 

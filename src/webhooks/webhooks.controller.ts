@@ -1,8 +1,11 @@
-import { BadRequestException, Body, Controller, Headers, HttpCode, InternalServerErrorException, Logger, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
-import { MercadoPagoWebhookGuard } from './mercado-pago-webhook.guard';
+import { BadRequestException, Body, Controller, Headers, HttpCode, HttpException, InternalServerErrorException, Logger, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { DonacionesService } from 'src/donaciones/donaciones.service';
-import { MercadoPagoWebhookDto, CreatePaymentWebhookSignaturesDto } from './dtos/create-payment-webook.dto';
-import { PaymentResponse } from 'mercadopago/dist/clients/order/commonTypes';
+import { MercadoPagoWebhookDto } from './dtos/create-payment-webook.dto';
+import { PreApprovalResponse } from 'mercadopago/dist/clients/preApproval/commonTypes';
+import { WebhooksService } from './webhooks.service';
+import type { Request } from 'express';
+
+
 
 @Controller({
   path: 'webhooks',
@@ -12,34 +15,88 @@ export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name, { timestamp: true })
 
   constructor(
-    private readonly donacionesService: DonacionesService
+    private readonly donacionesService: DonacionesService,
+    private readonly webhookService: WebhooksService
   ) { }
 
 
 
-  @UseGuards(MercadoPagoWebhookGuard)
   @Post('/mercado-pago/:type')
   @HttpCode(200)
   async handleMercadoPagoPaymentUpdate(
     @Body() body: MercadoPagoWebhookDto,
-    @Param('type') donacionType: 'one-time' | 'monthly'
+    @Param('type') donacionType: 'one-time' | 'monthly',
+    @Req() req: Request
   ) {
-    this.logger.log('IN CONTROLLER FUNCTION')
     try {
-      if (body.type === 'payment') {
-        const paymentId = body.data.id;
-        const existing = await this.donacionesService.getDonacionByPaymentId(paymentId);
+      const signature = req.headers['x-signature'];
+      const requestId = req.headers['x-request-id'];
 
-        if (existing) {
-          return;
+      if (!signature || !requestId) {
+        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ body, headers: req.headers })}`)
+        return;
+      }
+
+      const parts = Object.fromEntries(
+        (signature as string).split(',').map(p => p.split('=').map(s => s.trim()))
+      );
+      const timestamp = parts['ts'];
+      const hash = parts['v1'];
+      const dataId = req.body.data?.id;
+
+      if (!timestamp || !hash || !dataId) {
+        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ action: body.action, type: body.type, donacionType })}`)
+        return 'received';
+      }
+
+      const manifest = this.webhookService.getManifestString(dataId, requestId as string, timestamp);
+      const isReqAuthentic = () => this.webhookService.isHashValid(hash, manifest, donacionType);
+
+      if (body.action === 'created' && body.type === 'subscription_preapproval') {
+        // save recurring donation
+        const existingRecurring = await this.donacionesService.getRecurringDonacionByMercadoPagoId(dataId);
+        if (existingRecurring) {
+          return 'received';
         }
 
-        const details = await this.donacionesService.getPaymentDetails(paymentId);
-        this.logger.log(JSON.stringify(details, null, 2))
-        this.logger.log('BEFORE SAVE DONACION')
-        console.log(JSON.stringify(details, null, 2));
-        const { donacion, donador } = await this.donacionesService.saveDonacion(donacionType, details);
-        this.logger.log('AFTER SAVE DONACION')
+        if (!isReqAuthentic()) {
+          throw new BadRequestException();
+        }
+
+        const details = await this.donacionesService.getSuscriptionDetails(dataId);
+        const { recurring, donador } = await this.donacionesService.saveRecurringDonacion(details);
+
+        setImmediate(async () => {
+          try {
+            await this.donacionesService.sendThankYouEmailForRecurringDonacion(donador, recurring);
+          } catch (e) {
+            this.logger.error(e);
+          }
+        })
+
+      } else if (body.action === 'payment.created') {
+        // save donation payment 
+        const existingPayment = await this.donacionesService.getDonacionByPaymentId(dataId);
+        if (existingPayment) {
+          return 'received';
+        }
+
+        if (!isReqAuthentic()) {
+          throw new BadRequestException();
+        }
+
+        const paymentDetails = await this.donacionesService.getPaymentDetails(dataId);
+        let suscriptionDetails: PreApprovalResponse | null = null;
+        if (donacionType === 'monthly' && paymentDetails.payer) {
+          suscriptionDetails = await this.donacionesService.getSuscriptionDetailsByPayerId(Number(paymentDetails.payer.id))
+        }
+
+        const { donacion, donador } = await this.donacionesService.saveDonacion(
+          donacionType, {
+          payment: paymentDetails,
+          suscription: suscriptionDetails
+        });
+
         setImmediate(async () => {
           try {
             await this.donacionesService.sendThankYouEmailForDonacion(donador, donacion);
@@ -48,37 +105,18 @@ export class WebhooksController {
           }
         })
 
-        return;
+      } else {
+        this.logger.log(`Ignoring action ${body.action} of type ${body.type}: ${JSON.stringify(body)}`)
       }
 
+      return 'received'
 
-      if (body.type === 'subscription_preapproval') {
-        const mercadoPagoPreapprovalId = body.id.toString();
-        const existingRecurringDonacion = await this.donacionesService.getRecurringDonacionByMercadoPagoId(mercadoPagoPreapprovalId);
-
-        if (existingRecurringDonacion) return;
-
-        const details = await this.donacionesService.getSuscriptionDetails(mercadoPagoPreapprovalId);
-        console.log(JSON.stringify(details, null, 2));
-        this.logger.log(JSON.stringify(details, null, 2))
-        const { recurring, donador } = await this.donacionesService.saveRecurringDonacion(details);
-        setImmediate(async () => {
-          try {
-
-            await this.donacionesService.sendThankYouEmailForRecurringDonacion(donador, recurring);
-          } catch (e) {
-            this.logger.error(e);
-          }
-        })
-        return;
-      }
-
-      console.log('UNHANDLE WEBHOOK', JSON.stringify(body, null, 2));
     } catch (err) {
+      if (err instanceof HttpException) throw err;
+
       this.logger.error(err);
       throw new InternalServerErrorException();
     }
-    return;
   }
 
 }
