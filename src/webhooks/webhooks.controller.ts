@@ -32,8 +32,10 @@ export class WebhooksController {
       const signature = req.headers['x-signature'];
       const requestId = req.headers['x-request-id'];
 
+      this.logger.log({ signature, requestId });
+
       if (!signature || !requestId) {
-        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ body: req.body, headers: req.headers })}`)
+        this.logger.log(`Ignoring malformed req no signature or requestId`)
         return;
       }
 
@@ -45,9 +47,9 @@ export class WebhooksController {
       const dataId = req.body?.data?.id;
       const action = req.body?.action;
       const type = req.body?.type;
-
+      this.logger.log(`body: ${JSON.stringify(req.body)}`);
       if (!timestamp || !hash || !dataId) {
-        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ action, type, donacionType })}`)
+        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ action, type, donacionType })} (no ts hash or dataid)`)
         return 'received';
       }
       this.logger.log({ dataId, timestamp, hash })
