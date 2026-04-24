@@ -24,7 +24,7 @@ export class WebhooksController {
   @Post('/mercado-pago/:type')
   @HttpCode(200)
   async handleMercadoPagoPaymentUpdate(
-    @Body() body: MercadoPagoWebhookDto,
+    // @Body() body: MercadoPagoWebhookDto,
     @Param('type') donacionType: 'one-time' | 'monthly',
     @Req() req: Request
   ) {
@@ -33,7 +33,7 @@ export class WebhooksController {
       const requestId = req.headers['x-request-id'];
 
       if (!signature || !requestId) {
-        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ body, headers: req.headers })}`)
+        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ body: req.body, headers: req.headers })}`)
         return;
       }
 
@@ -42,17 +42,19 @@ export class WebhooksController {
       );
       const timestamp = parts['ts'];
       const hash = parts['v1'];
-      const dataId = req.body.data?.id;
+      const dataId = req.body?.data?.id;
+      const action = req.body?.action;
+      const type = req.body?.type;
 
       if (!timestamp || !hash || !dataId) {
-        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ action: body.action, type: body.type, donacionType })}`)
+        this.logger.log(`Ignoring malformed req: ${JSON.stringify({ action, type, donacionType })}`)
         return 'received';
       }
       this.logger.log({ dataId, timestamp, hash })
       const manifest = this.webhookService.getManifestString(dataId, requestId as string, timestamp);
       const isReqAuthentic = () => this.webhookService.isHashValid(hash, manifest, donacionType);
 
-      if (body.action === 'created' && body.type === 'subscription_preapproval') {
+      if (action === 'created' && type === 'subscription_preapproval') {
         // save recurring donation
         const existingRecurring = await this.donacionesService.getRecurringDonacionByMercadoPagoId(dataId);
         if (existingRecurring) {
@@ -74,7 +76,7 @@ export class WebhooksController {
           }
         })
 
-      } else if (body.action === 'payment.created') {
+      } else if (action === 'payment.created') {
         // save donation payment 
         const existingPayment = await this.donacionesService.getDonacionByPaymentId(dataId);
         if (existingPayment) {
@@ -106,7 +108,7 @@ export class WebhooksController {
         })
 
       } else {
-        this.logger.log(`Ignoring action ${body.action} of type ${body.type}: ${JSON.stringify(body)}`)
+        this.logger.log(`Ignoring action ${action} of type ${type}`)
       }
 
       return 'received'
