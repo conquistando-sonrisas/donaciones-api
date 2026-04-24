@@ -48,7 +48,7 @@ export class WebhooksController {
         this.logger.log(`Ignoring malformed req: ${JSON.stringify({ action: body.action, type: body.type, donacionType })}`)
         return 'received';
       }
-
+      this.logger.log({ dataId, timestamp, hash })
       const manifest = this.webhookService.getManifestString(dataId, requestId as string, timestamp);
       const isReqAuthentic = () => this.webhookService.isHashValid(hash, manifest, donacionType);
 
